@@ -1,4 +1,4 @@
-;; Add this function to REPL
+#################### Add this function to REPL ################33
 (defn fix-device-metadata! [device-id object-name vendor-name model-name]
   (if-let [dev (state/get-in-local-device nil [:remote-devices device-id])]
     (let [;; 1. Fetch property identifiers via reflection
@@ -34,5 +34,43 @@
 ;;  "..BCY44300M0000"
 
 
-;; for example : add this to REPL 
+################################################################################3
+
+To update object ID with its description, vendor etc, Add this to REPL 
 (fix-device-metadata! 103 "Azbil SCS-3" "Azbil Corporation" "BCY44300M0000") 
+
+
+########################################################################################################
+
+### To update curl output ## ADD this to REPL ###
+
+(defn dynamic-device-summary [local-device-id device-id]
+  ;; 1. Invoke the original compiled Wacnet summary function to get the network baseline
+  (let [base-summary (original-device-summary local-device-id device-id)
+        
+        ;; 2. Coerce the active device-id into both formats to guarantee a cache hit
+        id-as-long (cond 
+                     (number? device-id) (long device-id)
+                     (string? device-id) (Long/parseLong device-id)
+                     :else nil)
+        id-as-str (str device-id)
+        
+        ;; 3. Grab the global device configuration cache
+        ext-info-cache (bacure.state/get-in-local-device local-device-id [:bacure.remote-device/ext-info])
+        
+        ;; 4. Extract profile metadata if it exists for this device
+        metadata (or (get ext-info-cache id-as-long)
+                     (get ext-info-cache id-as-str))]
+    
+    ;; 5. If found, merge it seamlessly; otherwise, fall back to the clean network skeleton
+    if metadata
+      (merge base-summary metadata)
+      base-summary)))
+
+;; Apply the hook globally across all thread boundaries and pre-compiled Yada references
+(alter-var-root #'wacnet.api.bacnet.devices/device-summary (constantly dynamic-device-summary))
+
+;; Optional: If the global /api/v1/bacnet/devices list page doesn't update, patch its handler too
+(alter-var-root #'wacnet.api.bacnet.devices/devices-list (constantly dynamic-device-summary))
+
+############################################################################################################################
