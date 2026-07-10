@@ -45,32 +45,39 @@ To update object ID with its description, vendor etc, Add this to REPL
 ### To update curl output ## ADD this to REPL ###
 
 (defn dynamic-device-summary [local-device-id device-id]
-  ;; 1. Invoke the original compiled Wacnet summary function to get the network baseline
   (let [base-summary (original-device-summary local-device-id device-id)
-        
-        ;; 2. Coerce the active device-id into both formats to guarantee a cache hit
         id-as-long (cond 
                      (number? device-id) (long device-id)
                      (string? device-id) (Long/parseLong device-id)
                      :else nil)
         id-as-str (str device-id)
-        
-        ;; 3. Grab the global device configuration cache
         ext-info-cache (bacure.state/get-in-local-device local-device-id [:bacure.remote-device/ext-info])
-        
-        ;; 4. Extract profile metadata if it exists for this device
         metadata (or (get ext-info-cache id-as-long)
                      (get ext-info-cache id-as-str))]
-    
-    ;; 5. If found, merge it seamlessly; otherwise, fall back to the clean network skeleton
-    if metadata
+    (if metadata
       (merge base-summary metadata)
       base-summary)))
 
-;; Apply the hook globally across all thread boundaries and pre-compiled Yada references
+;; Apply the hook globally
 (alter-var-root #'wacnet.api.bacnet.devices/device-summary (constantly dynamic-device-summary))
+
 
 ;; Optional: If the global /api/v1/bacnet/devices list page doesn't update, patch its handler too
 (alter-var-root #'wacnet.api.bacnet.devices/devices-list (constantly dynamic-device-summary))
 
 ############################################################################################################################
+
+If above doesn't work add this manually for each object: e.g. for object 103
+
+
+(let [azbil-profile {:vendor-name "Azbil Corporation"
+                     :model-name "BCY44300M0000"
+                     :object-name "Azbil SCS-3"
+                     :device-name "Azbil SCS-3"
+                     :vendor-identifier 85}]
+  ;; Inject into both the Integer/Long key and String key to ensure an instant match
+  (bacure.state/assoc-in-local-device! nil [:bacure.remote-device/ext-info 103] azbil-profile)
+  (bacure.state/assoc-in-local-device! nil [:bacure.remote-device/ext-info "103"] azbil-profile))
+
+
+#########################################################
