@@ -1,0 +1,27 @@
+(defn fix-device-metadata! [device-id object-name vendor-name model-name]
+  (if-let [dev (state/get-in-local-device nil [:remote-devices device-id])]
+    (let [;; 1. Fetch property identifiers via reflection
+          p-obj (.get (.getField com.serotonin.bacnet4j.type.enumerated.PropertyIdentifier "objectName") nil)
+          p-vend (.get (.getField com.serotonin.bacnet4j.type.enumerated.PropertyIdentifier "vendorName") nil)
+          p-mod (.get (.getField com.serotonin.bacnet4j.type.enumerated.PropertyIdentifier "modelName") nil)
+          
+          ;; 2. Instantiate BACnet character strings
+          v-obj (new com.serotonin.bacnet4j.type.primitive.CharacterString object-name)
+          v-vend (new com.serotonin.bacnet4j.type.primitive.CharacterString vendor-name)
+          v-mod (new com.serotonin.bacnet4j.type.primitive.CharacterString model-name)]
+      
+      ;; 3. Write fields into the Java instance
+      (.setDeviceProperty dev p-obj v-obj)
+      (.setDeviceProperty dev p-vend v-vend)
+      (.setDeviceProperty dev p-mod v-mod)
+      
+      ;; 4. Return verification map
+      {:status "Updated"
+       :device-id device-id
+       :name (.getName dev)
+       :vendor (.getVendorName dev)
+       :model (.getModelName dev)})
+    {:status "Error" :message (str "Device " device-id " not found in local-device cache.")}))
+
+;; for example 
+(fix-device-metadata! 103 "Azbil SCS-3" "Azbil Corporation" "BCY44300M0000") 
