@@ -34,5 +34,5 @@
 ;;  "..BCY44300M0000"
 
 
-;; for example 
+;; for example : add this to REPL 
 (fix-device-metadata! 103 "Azbil SCS-3" "Azbil Corporation" "BCY44300M0000") 
