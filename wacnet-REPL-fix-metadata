@@ -1,3 +1,4 @@
+;; Add this function to REPL
 (defn fix-device-metadata! [device-id object-name vendor-name model-name]
   (if-let [dev (state/get-in-local-device nil [:remote-devices device-id])]
     (let [;; 1. Fetch property identifiers via reflection
@@ -22,6 +23,16 @@
        :vendor (.getVendorName dev)
        :model (.getModelName dev)})
     {:status "Error" :message (str "Device " device-id " not found in local-device cache.")}))
+
+
+;; command to check from bacnet stack
+ ;; root@neutron:/opt/bacnet-stack/bin# BACNET_IFACE=br0 ./bacrp 103 8 103 121
+;;  "..Azbil Corporation"
+;;  root@neutron:/opt/bacnet-stack/bin# BACNET_IFACE=br0 ./bacrp 103 8 103 77
+"..SCS-3"
+;; root@neutron:/opt/bacnet-stack/bin# BACNET_IFACE=br0 ./bacrp 103 8 103 70
+;;  "..BCY44300M0000"
+
 
 ;; for example 
 (fix-device-metadata! 103 "Azbil SCS-3" "Azbil Corporation" "BCY44300M0000") 
